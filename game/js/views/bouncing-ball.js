@@ -10,7 +10,9 @@ module.exports = {
     var context;
     var dims;
 
-    var updateBall = function(currentPosition, priorPosition) {
+    var updateBall = function(currentPosition, priorPosition, color) {
+      context.fillStyle = color;
+
       if (currentPosition === undefined) {
         context.beginPath();
         context.arc(priorPosition.x,priorPosition.y,25,0,2*Math.PI);
@@ -61,8 +63,8 @@ module.exports = {
 
 
         context.clearRect(0, 0, canvas[0].width, canvas[0].height);
-        updateBall(tracker().get(theBallPosition));
-        updateBall(position);
+        updateBall(tracker().get(theBallPosition), undefined, 'blue');
+        updateBall(position, undefined, 'red');
       },
       setup: function () {
         dims = dimensions().get();
@@ -73,6 +75,8 @@ module.exports = {
         context = canvas[0].getContext('2d');
 
         $('#' + element()).append(canvas);
+
+        tracker().onChangeOf(theBallPosition, updateBall, 'green');
       },
       screenResized: function () {
         dims = dimensions().get();
