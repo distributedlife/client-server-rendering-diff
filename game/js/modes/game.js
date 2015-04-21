@@ -10,12 +10,12 @@ module.exports = {
           'bouncing-ball-game': {
             ball: {
               position: {
-                x: 500,
-                y: 100
+                x: 100,
+                y: 50
               },
               speed: {
-                x: 50,
-                y: 150
+                x: 100,
+                y: 50
               }
             }
           }

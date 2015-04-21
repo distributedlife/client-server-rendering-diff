@@ -33,8 +33,8 @@ module.exports = {
       y: 50
     };
     var speed = {
-      x: 50,
-      y: 150
+      x: 100,
+      y: 50
     };
 
     return {

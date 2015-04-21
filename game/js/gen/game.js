@@ -44,17 +44,12 @@ module.exports = {
       y: 50
     };
     var speed = {
-      x: 50,
-      y: 150
+      x: 100,
+      y: 50
     };
 
-    var lastLoop = new Date();
     return {
       update: function (delta) {
-        var thisLoop = new Date();
-        console.log(1000 / (thisLoop - lastLoop));
-        lastLoop = thisLoop;
-
         if (context === undefined) {
           return;
         }
