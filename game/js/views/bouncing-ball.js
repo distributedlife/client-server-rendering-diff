@@ -10,8 +10,8 @@ module.exports = {
     var context;
     var dims;
 
-    var updateBall = function(currentPosition, priorPosition, color) {
-      context.fillStyle = color;
+    var updateBall = function(currentPosition, priorPosition, colour) {
+      context.fillStyle = colour;
 
       if (currentPosition === undefined) {
         context.beginPath();
@@ -39,30 +39,28 @@ module.exports = {
       y: 50
     };
 
+    var updateClientPosition = function(delta) {
+      position.x += speed.x * delta;
+      position.y += speed.y * delta;
+
+      if ((position.x > 500) || (position.x < 0)) {
+        speed.x = speed.x * -1;
+      }
+      if ((position.y > 500) || (position.y < 0)) {
+        speed.y = speed.y * -1;
+      }
+    };
+
     return {
       update: function (delta) {
         if (context === undefined) {
           return;
         }
 
-        position.x += speed.x * delta;
-        position.y += speed.y * delta;
-
-        if ((position.x > 500) || (position.x < 0)) {
-          speed.x = speed.x * -1;
-        }
-        if ((position.y > 500) || (position.y < 0)) {
-          speed.y = speed.y * -1;
-        }
-
-
-
-
-
-
-
+        updateClientPosition(delta);
 
         context.clearRect(0, 0, canvas[0].width, canvas[0].height);
+
         updateBall(tracker().get(theBallPosition), undefined, 'blue');
         updateBall(position, undefined, 'red');
       },
@@ -75,8 +73,6 @@ module.exports = {
         context = canvas[0].getContext('2d');
 
         $('#' + element()).append(canvas);
-
-        tracker().onChangeOf(theBallPosition, updateBall, 'green');
       },
       screenResized: function () {
         dims = dimensions().get();
