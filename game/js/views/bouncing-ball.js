@@ -10,59 +10,31 @@ module.exports = {
     var context;
     var dims;
 
-    var updateBall = function(currentPosition, priorPosition, colour) {
-      context.fillStyle = colour;
-
+    var updateBall = function(currentPosition) {
       if (currentPosition === undefined) {
-        context.beginPath();
-        context.arc(priorPosition.x,priorPosition.y,25,0,2*Math.PI);
-        context.closePath();
-        context.fill();
-      } else {
-        context.beginPath();
-        context.arc(currentPosition.x,currentPosition.y,25,0,2*Math.PI);
-        context.closePath();
-        context.fill();
+        return;
       }
+
+      context.fillStyle = 'blue';
+      context.beginPath();
+      console.log(currentPosition);
+      context.arc(currentPosition.x, currentPosition.y, 25, 0, 2*Math.PI);
+      context.closePath();
+      context.fill();
     };
 
     var theBallPosition = function (state) {
       return state['bouncing-ball-game'].ball.position;
     };
 
-    var position = {
-      x: 100,
-      y: 50
-    };
-    var speed = {
-      x: 100,
-      y: 50
-    };
-
-    var updateClientPosition = function(delta) {
-      position.x += speed.x * delta;
-      position.y += speed.y * delta;
-
-      if ((position.x > 500) || (position.x < 0)) {
-        speed.x = speed.x * -1;
-      }
-      if ((position.y > 500) || (position.y < 0)) {
-        speed.y = speed.y * -1;
-      }
-    };
-
     return {
-      update: function (delta) {
+      update: function () {
         if (context === undefined) {
           return;
         }
-
-        updateClientPosition(delta);
-
         context.clearRect(0, 0, canvas[0].width, canvas[0].height);
 
-        updateBall(tracker().get(theBallPosition), undefined, 'blue');
-        updateBall(position, undefined, 'red');
+        updateBall(tracker().get(theBallPosition));
       },
       setup: function () {
         dims = dimensions().get();
