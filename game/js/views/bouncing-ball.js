@@ -4,11 +4,10 @@ var $ = require('zepto-browserify').$;
 
 module.exports = {
   type: 'View',
-  deps: ['Element', 'Dimensions', 'StateTracker'],
-  func: function (element, dimensions, tracker) {
+  deps: ['Element', 'Dimensions', 'StateTracker', 'DefinePlugin'],
+  func: function (element, dimensions, tracker, define) {
     var canvas;
     var context;
-    var dims;
 
     var updateBall = function(currentPosition) {
       if (currentPosition === undefined) {
@@ -17,7 +16,6 @@ module.exports = {
 
       context.fillStyle = 'blue';
       context.beginPath();
-      console.log(currentPosition);
       context.arc(currentPosition.x, currentPosition.y, 25, 0, 2*Math.PI);
       context.closePath();
       context.fill();
@@ -27,33 +25,27 @@ module.exports = {
       return state['bouncing-ball-game'].ball.position;
     };
 
-    return {
-      update: function () {
-        if (context === undefined) {
-          return;
-        }
-        context.clearRect(0, 0, canvas[0].width, canvas[0].height);
+    return function (dims) {
+      canvas = $('<canvas/>', { id: 'scene' });
+      canvas[0].width = dims.usableWidth;
+      canvas[0].height = dims.usableHeight;
+      context = canvas[0].getContext('2d');
 
-        updateBall(tracker().get(theBallPosition));
-      },
-      setup: function () {
-        dims = dimensions().get();
+      $('#' + element()).append(canvas);
 
-        canvas = $('<canvas/>', { id: 'scene' });
-        canvas[0].width = dims.usableWidth;
-        canvas[0].height = dims.usableHeight;
-        context = canvas[0].getContext('2d');
+      define()('OnEachFrame', function () {
+        return function () {
+          context.clearRect(0, 0, canvas[0].width, canvas[0].height);
+          updateBall(tracker().get(theBallPosition));
+        };
+      });
 
-        $('#' + element()).append(canvas);
-      },
-      screenResized: function () {
-        dims = dimensions().get();
-
-        if (canvas !== undefined) {
+      define()('OnResize', function () {
+        return function (dims) {
           canvas[0].width = dims.usableWidth;
           canvas[0].height = dims.usableHeight;
-        }
-      }
+        };
+      });
     };
   }
 };

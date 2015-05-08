@@ -8,18 +8,17 @@ entryPoint.loadDefaults();
 entryPoint.load(require('./views/bouncing-ball'));
 entryPoint.run();
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./views/bouncing-ball":2,"ensemblejs-client":62}],2:[function(require,module,exports){
+},{"./views/bouncing-ball":2,"ensemblejs-client":60}],2:[function(require,module,exports){
 'use strict';
 
 var $ = require('zepto-browserify').$;
 
 module.exports = {
   type: 'View',
-  deps: ['Element', 'Dimensions', 'StateTracker'],
-  func: function (element, dimensions, tracker) {
+  deps: ['Element', 'Dimensions', 'StateTracker', 'DefinePlugin'],
+  func: function (element, dimensions, tracker, define) {
     var canvas;
     var context;
-    var dims;
 
     var updateBall = function(currentPosition) {
       if (currentPosition === undefined) {
@@ -28,7 +27,6 @@ module.exports = {
 
       context.fillStyle = 'blue';
       context.beginPath();
-      console.log(currentPosition);
       context.arc(currentPosition.x, currentPosition.y, 25, 0, 2*Math.PI);
       context.closePath();
       context.fill();
@@ -38,38 +36,31 @@ module.exports = {
       return state['bouncing-ball-game'].ball.position;
     };
 
-    return {
-      update: function () {
-        if (context === undefined) {
-          return;
-        }
-        context.clearRect(0, 0, canvas[0].width, canvas[0].height);
+    return function (dims) {
+      canvas = $('<canvas/>', { id: 'scene' });
+      canvas[0].width = dims.usableWidth;
+      canvas[0].height = dims.usableHeight;
+      context = canvas[0].getContext('2d');
 
-        updateBall(tracker().get(theBallPosition));
-      },
-      setup: function () {
-        dims = dimensions().get();
+      $('#' + element()).append(canvas);
 
-console.log("setup");
-        canvas = $('<canvas/>', { id: 'scene' });
-        canvas[0].width = dims.usableWidth;
-        canvas[0].height = dims.usableHeight;
-        context = canvas[0].getContext('2d');
+      define()('OnEachFrame', function () {
+        return function () {
+          context.clearRect(0, 0, canvas[0].width, canvas[0].height);
+          updateBall(tracker().get(theBallPosition));
+        };
+      });
 
-        $('#' + element()).append(canvas);
-      },
-      screenResized: function () {
-        dims = dimensions().get();
-
-        if (canvas !== undefined) {
+      define()('OnResize', function () {
+        return function (dims) {
           canvas[0].width = dims.usableWidth;
           canvas[0].height = dims.usableHeight;
-        }
-      }
+        };
+      });
     };
   }
 };
-},{"zepto-browserify":78}],3:[function(require,module,exports){
+},{"zepto-browserify":85}],3:[function(require,module,exports){
 
 },{}],4:[function(require,module,exports){
 (function (process){
@@ -363,7 +354,7 @@ process.umask = function() { return 0; };
 (function (global){
 /**
  * @license
- * lodash 3.7.0 (Custom Build) <https://lodash.com/>
+ * lodash 3.8.0 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern -d -o ./index.js`
  * Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>
  * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
@@ -376,7 +367,7 @@ process.umask = function() { return 0; };
   var undefined;
 
   /** Used as the semantic version number. */
-  var VERSION = '3.7.0';
+  var VERSION = '3.8.0';
 
   /** Used to compose bitmasks for wrapper metadata. */
   var BIND_FLAG = 1,
@@ -451,7 +442,7 @@ process.umask = function() { return 0; };
       reInterpolate = /<%=([\s\S]+?)%>/g;
 
   /** Used to match property names within property paths. */
-  var reIsDeepProp = /\.|\[(?:[^[\]]+|(["'])(?:(?!\1)[^\n\\]|\\.)*?)\1\]/,
+  var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\n\\]|\\.)*?\1)\]/,
       reIsPlainProp = /^\w*$/,
       rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
 
@@ -642,8 +633,6 @@ process.umask = function() { return 0; };
    * restricted `window` object, otherwise the `window` object is used.
    */
   var root = freeGlobal || ((freeWindow !== (this && this.window)) && freeWindow) || freeSelf || this;
-
-  /*--------------------------------------------------------------------------*/
 
   /**
    * The base implementation of `compareAscending` which compares values and
@@ -1015,8 +1004,6 @@ process.umask = function() { return 0; };
     return htmlUnescapes[chr];
   }
 
-  /*--------------------------------------------------------------------------*/
-
   /**
    * Create a new pristine `lodash` function using the given `context` object.
    *
@@ -1112,7 +1099,7 @@ process.umask = function() { return 0; };
         getOwnPropertySymbols = isNative(getOwnPropertySymbols = Object.getOwnPropertySymbols) && getOwnPropertySymbols,
         getPrototypeOf = isNative(getPrototypeOf = Object.getPrototypeOf) && getPrototypeOf,
         push = arrayProto.push,
-        preventExtensions = isNative(Object.preventExtensions = Object.preventExtensions) && preventExtensions,
+        preventExtensions = isNative(preventExtensions = Object.preventExtensions) && preventExtensions,
         propertyIsEnumerable = objectProto.propertyIsEnumerable,
         Set = isNative(Set = context.Set) && Set,
         setTimeout = context.setTimeout,
@@ -1140,12 +1127,19 @@ process.umask = function() { return 0; };
       //
       // Use `Object.preventExtensions` on a plain object instead of simply using
       // `Object('x')` because Chrome and IE fail to throw an error when attempting
-      // to assign values to readonly indexes of strings in strict mode.
-      var object = { '1': 0 },
-          func = preventExtensions && isNative(func = Object.assign) && func;
-
-      try { func(preventExtensions(object), 'xo'); } catch(e) {}
-      return !object[1] && func;
+      // to assign values to readonly indexes of strings.
+      var func = preventExtensions && isNative(func = Object.assign) && func;
+      try {
+        if (func) {
+          var object = preventExtensions({ '1': 0 });
+          object[0] = 1;
+        }
+      } catch(e) {
+        // Only attempt in strict mode.
+        try { func(object, 'xo'); } catch(e) {}
+        return !object[1] && func;
+      }
+      return false;
     }());
 
     /* Native method references for those with the same name as other `lodash` methods. */
@@ -1166,7 +1160,7 @@ process.umask = function() { return 0; };
 
     /** Used as references for the maximum length and index of an array. */
     var MAX_ARRAY_LENGTH = Math.pow(2, 32) - 1,
-        MAX_ARRAY_INDEX =  MAX_ARRAY_LENGTH - 1,
+        MAX_ARRAY_INDEX = MAX_ARRAY_LENGTH - 1,
         HALF_MAX_ARRAY_LENGTH = MAX_ARRAY_LENGTH >>> 1;
 
     /** Used as the size, in bytes, of each `Float64Array` element. */
@@ -1183,8 +1177,6 @@ process.umask = function() { return 0; };
 
     /** Used to lookup unminified function names. */
     var realNames = {};
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * Creates a `lodash` object which wraps `value` to enable implicit chaining.
@@ -1325,6 +1317,7 @@ process.umask = function() { return 0; };
 
     (function(x) {
       var Ctor = function() { this.x = x; },
+          args = arguments,
           object = { '0': x, 'length': x },
           props = [];
 
@@ -1374,7 +1367,7 @@ process.umask = function() { return 0; };
        * @type boolean
        */
       try {
-        support.nonEnumArgs = !propertyIsEnumerable.call(arguments, 1);
+        support.nonEnumArgs = !propertyIsEnumerable.call(args, 1);
       } catch(e) {
         support.nonEnumArgs = true;
       }
@@ -1440,8 +1433,6 @@ process.umask = function() { return 0; };
         '_': lodash
       }
     };
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * Creates a lazy wrapper object which wraps `value` to enable lazy evaluation.
@@ -1571,8 +1562,6 @@ process.umask = function() { return 0; };
       return result;
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Creates a cache object to store key/value pairs.
      *
@@ -1641,8 +1630,6 @@ process.umask = function() { return 0; };
       return this;
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      *
      * Creates a cache object to store unique values.
@@ -1691,8 +1678,6 @@ process.umask = function() { return 0; };
         data.hash[value] = true;
       }
     }
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * Copies the values of `source` to `array`.
@@ -2037,8 +2022,9 @@ process.umask = function() { return 0; };
      */
     function baseAt(collection, props) {
       var index = -1,
-          length = collection.length,
-          isArr = isLength(length),
+          isNil = collection == null,
+          isArr = !isNil && isArrayLike(collection),
+          length = isArr && collection.length,
           propsLength = props.length,
           result = Array(propsLength);
 
@@ -2047,7 +2033,7 @@ process.umask = function() { return 0; };
         if (isArr) {
           result[index] = isIndex(key, length) ? collection[key] : undefined;
         } else {
-          result[index] = collection[key];
+          result[index] = isNil ? undefined : collection[key];
         }
       }
       return result;
@@ -2374,8 +2360,8 @@ process.umask = function() { return 0; };
      *
      * @private
      * @param {Array} array The array to flatten.
-     * @param {boolean} isDeep Specify a deep flatten.
-     * @param {boolean} isStrict Restrict flattening to arrays and `arguments` objects.
+     * @param {boolean} [isDeep] Specify a deep flatten.
+     * @param {boolean} [isStrict] Restrict flattening to arrays-like objects.
      * @returns {Array} Returns the new flattened array.
      */
     function baseFlatten(array, isDeep, isStrict) {
@@ -2386,8 +2372,8 @@ process.umask = function() { return 0; };
 
       while (++index < length) {
         var value = array[index];
-
-        if (isObjectLike(value) && isLength(value.length) && (isArray(value) || isArguments(value))) {
+        if (isObjectLike(value) && isArrayLike(value) &&
+            (isStrict || isArray(value) || isArguments(value))) {
           if (isDeep) {
             // Recursively flatten arrays (susceptible to call stack limits).
             value = baseFlatten(value, isDeep, isStrict);
@@ -2395,7 +2381,6 @@ process.umask = function() { return 0; };
           var valIndex = -1,
               valLength = value.length;
 
-          result.length += valLength;
           while (++valIndex < valLength) {
             result[++resIndex] = value[valIndex];
           }
@@ -2516,9 +2501,9 @@ process.umask = function() { return 0; };
           length = path.length;
 
       while (object != null && ++index < length) {
-        var result = object = object[path[index]];
+        object = object[path[index]];
       }
-      return result;
+      return (index && index == length) ? object : undefined;
     }
 
     /**
@@ -2537,8 +2522,7 @@ process.umask = function() { return 0; };
     function baseIsEqual(value, other, customizer, isLoose, stackA, stackB) {
       // Exit early for identical values.
       if (value === other) {
-        // Treat `+0` vs. `-0` as not equal.
-        return value !== 0 || (1 / value == 1 / other);
+        return true;
       }
       var valType = typeof value,
           othType = typeof other;
@@ -2687,8 +2671,7 @@ process.umask = function() { return 0; };
      */
     function baseMap(collection, iteratee) {
       var index = -1,
-          length = getLength(collection),
-          result = isLength(length) ? Array(length) : [];
+          result = isArrayLike(collection) ? Array(collection.length) : [];
 
       baseEach(collection, function(value, key, collection) {
         result[++index] = iteratee(value, key, collection);
@@ -2787,7 +2770,7 @@ process.umask = function() { return 0; };
       if (!isObject(object)) {
         return object;
       }
-      var isSrcArr = isLength(source.length) && (isArray(source) || isTypedArray(source));
+      var isSrcArr = isArrayLike(source) && (isArray(source) || isTypedArray(source));
       if (!isSrcArr) {
         var props = keys(source);
         push.apply(props, getSymbols(source));
@@ -2850,10 +2833,10 @@ process.umask = function() { return 0; };
 
       if (isCommon) {
         result = srcValue;
-        if (isLength(srcValue.length) && (isArray(srcValue) || isTypedArray(srcValue))) {
+        if (isArrayLike(srcValue) && (isArray(srcValue) || isTypedArray(srcValue))) {
           result = isArray(value)
             ? value
-            : (getLength(value) ? arrayCopy(value) : []);
+            : (isArrayLike(value) ? arrayCopy(value) : []);
         }
         else if (isPlainObject(srcValue) || isArguments(srcValue)) {
           result = isArguments(value)
@@ -2915,7 +2898,7 @@ process.umask = function() { return 0; };
      * @returns {Array} Returns `array`.
      */
     function basePullAt(array, indexes) {
-      var length = indexes.length;
+      var length = array ? indexes.length : 0;
       while (length--) {
         var index = parseFloat(indexes[length]);
         if (index != previous && isIndex(index)) {
@@ -3401,12 +3384,12 @@ process.umask = function() { return 0; };
       while (++argsIndex < argsLength) {
         result[argsIndex] = args[argsIndex];
       }
-      var pad = argsIndex;
+      var offset = argsIndex;
       while (++rightIndex < rightLength) {
-        result[pad + rightIndex] = partials[rightIndex];
+        result[offset + rightIndex] = partials[rightIndex];
       }
       while (++holdersIndex < holdersLength) {
-        result[pad + holders[holdersIndex]] = args[argsIndex++];
+        result[offset + holders[holdersIndex]] = args[argsIndex++];
       }
       return result;
     }
@@ -3674,7 +3657,7 @@ process.umask = function() { return 0; };
           return index > -1 ? collection[index] : undefined;
         }
         return baseFind(collection, predicate, eachFunc);
-      }
+      };
     }
 
     /**
@@ -3740,7 +3723,7 @@ process.umask = function() { return 0; };
           funcName = getFuncName(func);
 
           var data = funcName == 'wrapper' ? getData(func) : null;
-          if (data && isLaziable(data[0])) {
+          if (data && isLaziable(data[0]) && data[1] == (ARY_FLAG | CURRY_FLAG | PARTIAL_FLAG | REARG_FLAG) && !data[4].length && data[9] == 1) {
             wrapper = wrapper[getFuncName(data[0])].apply(wrapper, data[3]);
           } else {
             wrapper = (func.length == 1 && isLaziable(func)) ? wrapper[funcName]() : wrapper.thru(func);
@@ -3811,6 +3794,28 @@ process.umask = function() { return 0; };
     }
 
     /**
+     * Creates a function for `_.mapKeys` or `_.mapValues`.
+     *
+     * @private
+     * @param {boolean} [isMapKeys] Specify mapping keys instead of values.
+     * @returns {Function} Returns the new map function.
+     */
+    function createObjectMapper(isMapKeys) {
+      return function(object, iteratee, thisArg) {
+        var result = {};
+        iteratee = getCallback(iteratee, thisArg, 3);
+
+        baseForOwn(object, function(value, key, object) {
+          var mapped = iteratee(value, key, object);
+          key = isMapKeys ? mapped : key;
+          value = isMapKeys ? value : mapped;
+          result[key] = value;
+        });
+        return result;
+      };
+    }
+
+    /**
      * Creates a function for `_.padLeft` or `_.padRight`.
      *
      * @private
@@ -3820,7 +3825,7 @@ process.umask = function() { return 0; };
     function createPadDir(fromRight) {
       return function(string, length, chars) {
         string = baseToString(string);
-        return string && ((fromRight ? string : '') + createPadding(string, length, chars) + (fromRight ? '' : string));
+        return (fromRight ? string : '') + createPadding(string, length, chars) + (fromRight ? '' : string);
       };
     }
 
@@ -4166,8 +4171,7 @@ process.umask = function() { return 0; };
           // Treat `NaN` vs. `NaN` as equal.
           return (object != +object)
             ? other != +other
-            // But, treat `-0` vs. `+0` as not equal.
-            : (object == 0 ? ((1 / object) == (1 / other)) : object == +other);
+            : object == +other;
 
         case regexpTag:
         case stringTag:
@@ -4347,7 +4351,7 @@ process.umask = function() { return 0; };
      * Gets the "length" property value of `object`.
      *
      * **Note:** This function is used to avoid a [JIT bug](https://bugs.webkit.org/show_bug.cgi?id=142792)
-     * in Safari on iOS 8.1 ARM64.
+     * that affects Safari on at least iOS 8.1-8.3 ARM64.
      *
      * @private
      * @param {Object} object The object to query.
@@ -4487,6 +4491,17 @@ process.umask = function() { return 0; };
     }
 
     /**
+     * Checks if `value` is array-like.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+     */
+    function isArrayLike(value) {
+      return value != null && isLength(getLength(value));
+    }
+
+    /**
      * Checks if `value` is a valid array-like index.
      *
      * @private
@@ -4514,13 +4529,9 @@ process.umask = function() { return 0; };
         return false;
       }
       var type = typeof index;
-      if (type == 'number') {
-        var length = getLength(object),
-            prereq = isLength(length) && isIndex(index, length);
-      } else {
-        prereq = type == 'string' && index in object;
-      }
-      if (prereq) {
+      if (type == 'number'
+          ? (isArrayLike(object) && isIndex(index, object.length))
+          : (type == 'string' && index in object)) {
         var other = object[index];
         return value === value ? (value === other) : (other !== other);
       }
@@ -4581,7 +4592,7 @@ process.umask = function() { return 0; };
      *  equality comparisons, else `false`.
      */
     function isStrictComparable(value) {
-      return value === value && (value === 0 ? ((1 / value) > 0) : !isObject(value));
+      return value === value && !isObject(value);
     }
 
     /**
@@ -4655,7 +4666,7 @@ process.umask = function() { return 0; };
     }
 
     /**
-     * A specialized version of `_.pick` that picks `object` properties specified
+     * A specialized version of `_.pick` which picks `object` properties specified
      * by `props`.
      *
      * @private
@@ -4680,7 +4691,7 @@ process.umask = function() { return 0; };
     }
 
     /**
-     * A specialized version of `_.pick` that picks `object` properties `predicate`
+     * A specialized version of `_.pick` which picks `object` properties `predicate`
      * returns truthy for.
      *
      * @private
@@ -4825,7 +4836,7 @@ process.umask = function() { return 0; };
       if (value == null) {
         return [];
       }
-      if (!isLength(getLength(value))) {
+      if (!isArrayLike(value)) {
         return values(value);
       }
       return isObject(value) ? value : Object(value);
@@ -4872,8 +4883,6 @@ process.umask = function() { return 0; };
         ? wrapper.clone()
         : new LodashWrapper(wrapper.__wrapped__, wrapper.__chain__, arrayCopy(wrapper.__actions__));
     }
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * Creates an array of elements split into groups the length of `size`.
@@ -4943,11 +4952,8 @@ process.umask = function() { return 0; };
 
     /**
      * Creates an array excluding all values of the provided arrays using
-     * `SameValueZero` for equality comparisons.
-     *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons.
      *
      * @static
      * @memberOf _
@@ -4961,7 +4967,7 @@ process.umask = function() { return 0; };
      * // => [1, 3]
      */
     var difference = restParam(function(array, values) {
-      return (isArray(array) || isArguments(array))
+      return isArrayLike(array)
         ? baseDifference(array, baseFlatten(values, false, true))
         : [];
     });
@@ -5356,13 +5362,10 @@ process.umask = function() { return 0; };
 
     /**
      * Gets the index at which the first occurrence of `value` is found in `array`
-     * using `SameValueZero` for equality comparisons. If `fromIndex` is negative,
-     * it is used as the offset from the end of `array`. If `array` is sorted
-     * providing `true` for `fromIndex` performs a faster binary search.
-     *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
+     * using [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons. If `fromIndex` is negative, it is used as the offset
+     * from the end of `array`. If `array` is sorted providing `true` for `fromIndex`
+     * performs a faster binary search.
      *
      * @static
      * @memberOf _
@@ -5422,12 +5425,9 @@ process.umask = function() { return 0; };
     }
 
     /**
-     * Creates an array of unique values in all provided arrays using `SameValueZero`
+     * Creates an array of unique values in all provided arrays using
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
      * for equality comparisons.
-     *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
      *
      * @static
      * @memberOf _
@@ -5449,7 +5449,7 @@ process.umask = function() { return 0; };
 
       while (++argsIndex < argsLength) {
         var value = arguments[argsIndex];
-        if (isArray(value) || isArguments(value)) {
+        if (isArrayLike(value)) {
           args.push(value);
           caches.push((isCommon && value.length >= 120) ? createCache(argsIndex && value) : null);
         }
@@ -5554,14 +5554,11 @@ process.umask = function() { return 0; };
     }
 
     /**
-     * Removes all provided values from `array` using `SameValueZero` for equality
-     * comparisons.
+     * Removes all provided values from `array` using
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons.
      *
-     * **Notes:**
-     *  - Unlike `_.without`, this method mutates `array`
-     *  - [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     *    comparisons are like strict equality comparisons, e.g. `===`, except
-     *    that `NaN` matches `NaN`
+     * **Note:** Unlike `_.without`, this method mutates `array`.
      *
      * @static
      * @memberOf _
@@ -5625,7 +5622,6 @@ process.umask = function() { return 0; };
      * // => [10, 20]
      */
     var pullAt = restParam(function(array, indexes) {
-      array || (array = []);
       indexes = baseFlatten(indexes);
 
       var result = baseAt(array, indexes);
@@ -5992,11 +5988,8 @@ process.umask = function() { return 0; };
 
     /**
      * Creates an array of unique values, in order, of the provided arrays using
-     * `SameValueZero` for equality comparisons.
-     *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons.
      *
      * @static
      * @memberOf _
@@ -6013,8 +6006,9 @@ process.umask = function() { return 0; };
     });
 
     /**
-     * Creates a duplicate-free version of an array, using `SameValueZero` for
-     * equality comparisons, in which only the first occurence of each element
+     * Creates a duplicate-free version of an array, using
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons, in which only the first occurence of each element
      * is kept. Providing `true` for `isSorted` performs a faster search algorithm
      * for sorted arrays. If an iteratee function is provided it is invoked for
      * each element in the array to generate the criterion by which uniqueness
@@ -6031,10 +6025,6 @@ process.umask = function() { return 0; };
      * If an object is provided for `iteratee` the created `_.matches` style
      * callback returns `true` for elements that have the properties of the given
      * object, else `false`.
-     *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
      *
      * @static
      * @memberOf _
@@ -6085,7 +6075,7 @@ process.umask = function() { return 0; };
 
     /**
      * This method is like `_.zip` except that it accepts an array of grouped
-     * elements and creates an array regrouping the elements to their pre-`_.zip`
+     * elements and creates an array regrouping the elements to their pre-zip
      * configuration.
      *
      * @static
@@ -6102,10 +6092,19 @@ process.umask = function() { return 0; };
      * // => [['fred', 'barney'], [30, 40], [true, false]]
      */
     function unzip(array) {
+      if (!(array && array.length)) {
+        return [];
+      }
       var index = -1,
-          length = (array && array.length && arrayMax(arrayMap(array, getLength))) >>> 0,
-          result = Array(length);
+          length = 0;
 
+      array = arrayFilter(array, function(group) {
+        if (isArrayLike(group)) {
+          length = nativeMax(group.length, length);
+          return true;
+        }
+      });
+      var result = Array(length);
       while (++index < length) {
         result[index] = arrayMap(array, baseProperty(index));
       }
@@ -6113,12 +6112,44 @@ process.umask = function() { return 0; };
     }
 
     /**
-     * Creates an array excluding all provided values using `SameValueZero` for
-     * equality comparisons.
+     * This method is like `_.unzip` except that it accepts an iteratee to specify
+     * how regrouped values should be combined. The `iteratee` is bound to `thisArg`
+     * and invoked with four arguments: (accumulator, value, index, group).
      *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array of grouped elements to process.
+     * @param {Function} [iteratee] The function to combine regrouped values.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new array of regrouped elements.
+     * @example
+     *
+     * var zipped = _.zip([1, 2], [10, 20], [100, 200]);
+     * // => [[1, 10, 100], [2, 20, 200]]
+     *
+     * _.unzipWith(zipped, _.add);
+     * // => [3, 30, 300]
+     */
+    function unzipWith(array, iteratee, thisArg) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      var result = unzip(array);
+      if (iteratee == null) {
+        return result;
+      }
+      iteratee = bindCallback(iteratee, thisArg, 4);
+      return arrayMap(result, function(group) {
+        return arrayReduce(group, iteratee, undefined, true);
+      });
+    }
+
+    /**
+     * Creates an array excluding all provided values using
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons.
      *
      * @static
      * @memberOf _
@@ -6132,7 +6163,7 @@ process.umask = function() { return 0; };
      * // => [3]
      */
     var without = restParam(function(array, values) {
-      return (isArray(array) || isArguments(array))
+      return isArrayLike(array)
         ? baseDifference(array, values)
         : [];
     });
@@ -6157,7 +6188,7 @@ process.umask = function() { return 0; };
 
       while (++index < length) {
         var array = arguments[index];
-        if (isArray(array) || isArguments(array)) {
+        if (isArrayLike(array)) {
           var result = result
             ? baseDifference(result, array).concat(baseDifference(array, result))
             : array;
@@ -6223,7 +6254,37 @@ process.umask = function() { return 0; };
       return result;
     }
 
-    /*------------------------------------------------------------------------*/
+    /**
+     * This method is like `_.zip` except that it accepts an iteratee to specify
+     * how grouped values should be combined. The `iteratee` is bound to `thisArg`
+     * and invoked with four arguments: (accumulator, value, index, group).
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {...Array} [arrays] The arrays to process.
+     * @param {Function} [iteratee] The function to combine grouped values.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new array of grouped elements.
+     * @example
+     *
+     * _.zipWith([1, 2], [10, 20], [100, 200], _.add);
+     * // => [111, 222]
+     */
+    var zipWith = restParam(function(arrays) {
+      var length = arrays.length,
+          iteratee = arrays[length - 2],
+          thisArg = arrays[length - 1];
+
+      if (length > 2 && typeof iteratee == 'function') {
+        length -= 2;
+      } else {
+        iteratee = (length > 1 && typeof thisArg == 'function') ? (--length, thisArg) : undefined;
+        thisArg = undefined;
+      }
+      arrays.length = length;
+      return unzipWith(arrays, iteratee, thisArg);
+    });
 
     /**
      * Creates a `lodash` object that wraps `value` with explicit method
@@ -6475,8 +6536,6 @@ process.umask = function() { return 0; };
       return baseWrapperValue(this.__wrapped__, this.__actions__);
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Creates an array of elements corresponding to the given keys, or indexes,
      * of `collection`. Keys may be specified as individual arguments or as arrays
@@ -6498,10 +6557,6 @@ process.umask = function() { return 0; };
      * // => ['barney', 'pebbles']
      */
     var at = restParam(function(collection, props) {
-      var length = collection ? getLength(collection) : 0;
-      if (isLength(length)) {
-        collection = toIterable(collection);
-      }
       return baseAt(collection, baseFlatten(props));
     });
 
@@ -6874,13 +6929,10 @@ process.umask = function() { return 0; };
     });
 
     /**
-     * Checks if `value` is in `collection` using `SameValueZero` for equality
-     * comparisons. If `fromIndex` is negative, it is used as the offset from
-     * the end of `collection`.
-     *
-     * **Note:** [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-     * comparisons are like strict equality comparisons, e.g. `===`, except that
-     * `NaN` matches `NaN`.
+     * Checks if `value` is in `collection` using
+     * [`SameValueZero`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+     * for equality comparisons. If `fromIndex` is negative, it is used as the offset
+     * from the end of `collection`.
      *
      * @static
      * @memberOf _
@@ -7000,8 +7052,7 @@ process.umask = function() { return 0; };
       var index = -1,
           isFunc = typeof path == 'function',
           isProp = isKey(path),
-          length = getLength(collection),
-          result = isLength(length) ? Array(length) : [];
+          result = isArrayLike(collection) ? Array(collection.length) : [];
 
       baseEach(collection, function(value) {
         var func = isFunc ? path : (isProp && value != null && value[path]);
@@ -7030,10 +7081,11 @@ process.umask = function() { return 0; };
      * `_.every`, `_.filter`, `_.map`, `_.mapValues`, `_.reject`, and `_.some`.
      *
      * The guarded methods are:
-     * `ary`, `callback`, `chunk`, `clone`, `create`, `curry`, `curryRight`, `drop`,
-     * `dropRight`, `every`, `fill`, `flatten`, `invert`, `max`, `min`, `parseInt`,
-     * `slice`, `sortBy`, `take`, `takeRight`, `template`, `trim`, `trimLeft`,
-     * `trimRight`, `trunc`, `random`, `range`, `sample`, `some`, `uniq`, and `words`
+     * `ary`, `callback`, `chunk`, `clone`, `create`, `curry`, `curryRight`,
+     * `drop`, `dropRight`, `every`, `fill`, `flatten`, `invert`, `max`, `min`,
+     * `parseInt`, `slice`, `sortBy`, `take`, `takeRight`, `template`, `trim`,
+     * `trimLeft`, `trimRight`, `trunc`, `random`, `range`, `sample`, `some`,
+     * `sum`, `uniq`, and `words`
      *
      * @static
      * @memberOf _
@@ -7221,22 +7273,11 @@ process.umask = function() { return 0; };
      * }, []);
      * // => [4, 5, 2, 3, 0, 1]
      */
-    var reduceRight =  createReduce(arrayReduceRight, baseEachRight);
+    var reduceRight = createReduce(arrayReduceRight, baseEachRight);
 
     /**
      * The opposite of `_.filter`; this method returns the elements of `collection`
      * that `predicate` does **not** return truthy for.
-     *
-     * If a property name is provided for `predicate` the created `_.property`
-     * style callback returns the property value of the given element.
-     *
-     * If a value is also provided for `thisArg` the created `_.matchesProperty`
-     * style callback returns `true` for elements that have a matching property
-     * value, else `false`.
-     *
-     * If an object is provided for `predicate` the created `_.matches` style
-     * callback returns `true` for elements that have the properties of the given
-     * object, else `false`.
      *
      * @static
      * @memberOf _
@@ -7616,8 +7657,6 @@ process.umask = function() { return 0; };
       return filter(collection, baseMatches(source));
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Gets the number of milliseconds that have elapsed since the Unix epoch
      * (1 January 1970 00:00:00 UTC).
@@ -7635,8 +7674,6 @@ process.umask = function() { return 0; };
     var now = nativeNow || function() {
       return new Date().getTime();
     };
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * The opposite of `_.before`; this method creates a function that invokes
@@ -8617,8 +8654,6 @@ process.umask = function() { return 0; };
       return createWrapper(wrapper, PARTIAL_FLAG, null, [value], []);
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Creates a clone of `value`. If `isDeep` is `true` nested objects are cloned,
      * otherwise they are assigned by reference. If `customizer` is provided it is
@@ -8750,8 +8785,7 @@ process.umask = function() { return 0; };
      * // => false
      */
     function isArguments(value) {
-      var length = isObjectLike(value) ? value.length : undefined;
-      return isLength(length) && objToString.call(value) == argsTag;
+      return isObjectLike(value) && isArrayLike(value) && objToString.call(value) == argsTag;
     }
 
     /**
@@ -8872,10 +8906,9 @@ process.umask = function() { return 0; };
       if (value == null) {
         return true;
       }
-      var length = getLength(value);
-      if (isLength(length) && (isArray(value) || isString(value) || isArguments(value) ||
+      if (isArrayLike(value) && (isArray(value) || isString(value) || isArguments(value) ||
           (isObjectLike(value) && isFunction(value.splice)))) {
-        return !length;
+        return !value.length;
       }
       return !keys(value).length;
     }
@@ -9265,7 +9298,7 @@ process.umask = function() { return 0; };
      * // => false
      */
     function isRegExp(value) {
-      return (isObjectLike(value) && objToString.call(value) == regexpTag) || false;
+      return isObjectLike(value) && objToString.call(value) == regexpTag;
     }
 
     /**
@@ -9381,8 +9414,6 @@ process.umask = function() { return 0; };
       return baseCopy(value, keysIn(value));
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Assigns own enumerable properties of source object(s) to the destination
      * object. Subsequent sources overwrite property assignments of previous sources.
@@ -9392,7 +9423,6 @@ process.umask = function() { return 0; };
      *
      * **Note:** This method mutates `object` and is based on
      * [`Object.assign`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-object.assign).
-     *
      *
      * @static
      * @memberOf _
@@ -9865,12 +9895,9 @@ process.umask = function() { return 0; };
      * // => ['0', '1']
      */
     var keys = !nativeKeys ? shimKeys : function(object) {
-      if (object) {
-        var Ctor = object.constructor,
-            length = object.length;
-      }
+      var Ctor = object != null && object.constructor;
       if ((typeof Ctor == 'function' && Ctor.prototype === object) ||
-          (typeof object != 'function' && isLength(length))) {
+          (typeof object != 'function' && isArrayLike(object))) {
         return shimKeys(object);
       }
       return isObject(object) ? nativeKeys(object) : [];
@@ -9928,6 +9955,28 @@ process.umask = function() { return 0; };
     }
 
     /**
+     * The opposite of `_.mapValues`; this method creates an object with the
+     * same values as `object` and keys generated by running each own enumerable
+     * property of `object` through `iteratee`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns the new mapped object.
+     * @example
+     *
+     * _.mapKeys({ 'a': 1, 'b': 2 }, function(value, key) {
+     *   return key + value;
+     * });
+     * // => { 'a1': 1, 'b2': 2 }
+     */
+    var mapKeys = createObjectMapper(true);
+
+    /**
      * Creates an object with the same keys as `object` and values generated by
      * running each own enumerable property of `object` through `iteratee`. The
      * iteratee function is bound to `thisArg` and invoked with three arguments:
@@ -9968,15 +10017,7 @@ process.umask = function() { return 0; };
      * _.mapValues(users, 'age');
      * // => { 'fred': 40, 'pebbles': 1 } (iteration order is not guaranteed)
      */
-    function mapValues(object, iteratee, thisArg) {
-      var result = {};
-      iteratee = getCallback(iteratee, thisArg, 3);
-
-      baseForOwn(object, function(value, key, object) {
-        result[key] = iteratee(value, key, object);
-      });
-      return result;
-    }
+    var mapValues = createObjectMapper();
 
     /**
      * Recursively merges own enumerable properties of the source object(s), that
@@ -10031,11 +10072,6 @@ process.umask = function() { return 0; };
     /**
      * The opposite of `_.pick`; this method creates an object composed of the
      * own and inherited enumerable properties of `object` that are not omitted.
-     * Property names may be specified as individual arguments or as arrays of
-     * property names. If `predicate` is provided it is invoked for each property
-     * of `object` omitting the properties `predicate` returns truthy for. The
-     * predicate is bound to `thisArg` and invoked with three arguments:
-     * (value, key, object).
      *
      * @static
      * @memberOf _
@@ -10329,8 +10365,6 @@ process.umask = function() { return 0; };
       return baseValues(object, keysIn(object));
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Checks if `n` is between `start` and up to but not including, `end`. If
      * `end` is not specified it is set to `start` with `start` then set to `0`.
@@ -10434,8 +10468,6 @@ process.umask = function() { return 0; };
       }
       return baseRandom(min, max);
     }
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * Converts `string` to [camel case](https://en.wikipedia.org/wiki/CamelCase).
@@ -11302,8 +11334,6 @@ process.umask = function() { return 0; };
       return string.match(pattern || reWords) || [];
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Attempts to invoke `func`, returning either the result or the caught error
      * object. Any additional arguments are provided to `func` when it is invoked.
@@ -11374,7 +11404,9 @@ process.umask = function() { return 0; };
       if (guard && isIterateeCall(func, thisArg, guard)) {
         thisArg = null;
       }
-      return baseCallback(func, thisArg);
+      return isObjectLike(func)
+        ? matches(func)
+        : baseCallback(func, thisArg);
     }
 
     /**
@@ -11499,7 +11531,7 @@ process.umask = function() { return 0; };
     var method = restParam(function(path, args) {
       return function(object) {
         return invokePath(object, path, args);
-      }
+      };
     });
 
     /**
@@ -11836,8 +11868,6 @@ process.umask = function() { return 0; };
       return baseToString(prefix) + id;
     }
 
-    /*------------------------------------------------------------------------*/
-
     /**
      * Adds two numbers.
      *
@@ -12002,8 +12032,6 @@ process.umask = function() { return 0; };
         : baseSum(collection, iteratee);
     }
 
-    /*------------------------------------------------------------------------*/
-
     // Ensure wrappers are instances of `baseLodash`.
     lodash.prototype = baseLodash.prototype;
 
@@ -12074,6 +12102,7 @@ process.umask = function() { return 0; };
     lodash.keys = keys;
     lodash.keysIn = keysIn;
     lodash.map = map;
+    lodash.mapKeys = mapKeys;
     lodash.mapValues = mapValues;
     lodash.matches = matches;
     lodash.matchesProperty = matchesProperty;
@@ -12122,6 +12151,7 @@ process.umask = function() { return 0; };
     lodash.union = union;
     lodash.uniq = uniq;
     lodash.unzip = unzip;
+    lodash.unzipWith = unzipWith;
     lodash.values = values;
     lodash.valuesIn = valuesIn;
     lodash.where = where;
@@ -12130,6 +12160,7 @@ process.umask = function() { return 0; };
     lodash.xor = xor;
     lodash.zip = zip;
     lodash.zipObject = zipObject;
+    lodash.zipWith = zipWith;
 
     // Add aliases.
     lodash.backflow = flowRight;
@@ -12147,8 +12178,6 @@ process.umask = function() { return 0; };
 
     // Add functions to `lodash.prototype`.
     mixin(lodash, lodash);
-
-    /*------------------------------------------------------------------------*/
 
     // Add functions that return unwrapped values when chaining.
     lodash.add = add;
@@ -12253,8 +12282,6 @@ process.umask = function() { return 0; };
       return source;
     }()), false);
 
-    /*------------------------------------------------------------------------*/
-
     // Add functions capable of returning wrapped and unwrapped values when chaining.
     lodash.sample = sample;
 
@@ -12266,8 +12293,6 @@ process.umask = function() { return 0; };
         return sample(value, n);
       });
     };
-
-    /*------------------------------------------------------------------------*/
 
     /**
      * The semantic version number.
@@ -12379,8 +12404,13 @@ process.umask = function() { return 0; };
 
     LazyWrapper.prototype.slice = function(start, end) {
       start = start == null ? 0 : (+start || 0);
-      var result = start < 0 ? this.takeRight(-start) : this.drop(start);
 
+      var result = this;
+      if (start < 0) {
+        result = this.takeRight(-start);
+      } else if (start) {
+        result = this.drop(start);
+      }
       if (end !== undefined) {
         end = (+end || 0);
         result = end < 0 ? result.dropRight(-end) : result.take(end - start);
@@ -12403,7 +12433,6 @@ process.umask = function() { return 0; };
 
       lodash.prototype[methodName] = function() {
         var args = arguments,
-            length = args.length,
             chainAll = this.__chain__,
             value = this.__wrapped__,
             isHybrid = !!this.__actions__.length,
@@ -12491,8 +12520,6 @@ process.umask = function() { return 0; };
 
     return lodash;
   }
-
-  /*--------------------------------------------------------------------------*/
 
   // Export lodash.
   var _ = runInContext();
@@ -13211,131 +13238,6 @@ process.umask = function() { return 0; };
 }).call(this);
 
 },{}],8:[function(require,module,exports){
-(function (__dirname){
-'use strict';
-
-var addTrailingSlash = function(path) {
-	return path.substr(-1) === '/' ? path : path + '/';
-};
-
-var normaliseRelativePath = function(path) {
-	return path.substr(0, 1) === '/' ? path : require('path').join(__dirname, path);
-};
-
-module.exports = {
-	loadFromPath: function(pathToEntites, callback) {
-		var absolutePath = normaliseRelativePath(addTrailingSlash(pathToEntites));
-
-		var exports = {};
-
-		require('fs').readdirSync(absolutePath).forEach(function(file){
-			if (file.substr(-3) !== '.js') {
-				return;
-			}
-
-			var name = file.replace('.js', '');
-
-			if (callback) {
-				callback(require(absolutePath + file));
-			} else {
-				exports[name] = require(absolutePath + file);
-			}
-		});
-
-		return exports;
-	}
-};
-}).call(this,"/node_modules/ensemblejs-client/node_modules/plug-n-play/src")
-},{"fs":3,"path":4}],9:[function(require,module,exports){
-'use strict';
-
-var loader = require('./folder-loader.js');
-var isArray = require('lodash').isArray;
-var each = require('lodash').each;
-
-var plugins = {};
-
-var get = function (name) {
-  if (!plugins[name]) {
-    throw new Error('No plugin defined for: ' + name);
-  }
-
-  return plugins[name];
-};
-
-var load = function (module) {
-  module.deps = module.deps || [];
-
-  var args = [];
-  var i;
-
-  var deferredDependency = function (deferred) {
-    return function () {
-      return get(deferred);
-    };
-  };
-
-  var dep;
-  for (i = 0; i < module.deps.length; i += 1) {
-    dep = module.deps[i];
-
-    args.push(deferredDependency(dep));
-  }
-
-  if (isArray(plugins[module.type])) {
-    plugins[module.type].push(module.func.apply(this, args));
-  } else {
-    plugins[module.type] = module.func.apply(this, args);
-  }
-};
-
-var loadPath = function (path) {
-  loader.loadFromPath(path, load);
-};
-
-var set = function (name, thing) {
-  plugins[name] = thing;
-};
-
-var define = function (type, deps, func) {
-  if (deps instanceof Function) {
-    return {
-      type: type,
-      func: deps
-    };
-  } else {
-    return {
-      type: type,
-      deps: deps,
-      func: func
-    };
-  }
-};
-
-load({
-  type: 'DefinePlugin',
-  func: function () {
-    return function (type, deps, func) {
-      load(define(type, deps, func));
-    };
-  }
-});
-
-module.exports = {
-  configure: function(arrays) {
-    each(arrays, function(name) {
-      plugins[name] = [];
-    });
-
-    return {
-      load: load,
-      loadPath: loadPath,
-      set: set,
-      get: get
-    };
-  }
-};
-},{"./folder-loader.js":8,"lodash":6}],10:[function(require,module,exports){
 /*!
 * screenfull
 * v2.0.0 - 2014-12-22
@@ -13482,11 +13384,11 @@ module.exports = {
 	}
 })();
 
-},{}],11:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":12}],12:[function(require,module,exports){
+},{"./lib/":10}],10:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -13575,7 +13477,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":13,"./socket":15,"./url":16,"debug":20,"socket.io-parser":56}],13:[function(require,module,exports){
+},{"./manager":11,"./socket":13,"./url":14,"debug":18,"socket.io-parser":54}],11:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -14080,7 +13982,7 @@ Manager.prototype.onreconnect = function(){
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":14,"./socket":15,"./url":16,"backo2":17,"component-bind":18,"component-emitter":19,"debug":20,"engine.io-client":21,"indexof":52,"object-component":53,"socket.io-parser":56}],14:[function(require,module,exports){
+},{"./on":12,"./socket":13,"./url":14,"backo2":15,"component-bind":16,"component-emitter":17,"debug":18,"engine.io-client":19,"indexof":50,"object-component":51,"socket.io-parser":54}],12:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -14106,7 +14008,7 @@ function on(obj, ev, fn) {
   };
 }
 
-},{}],15:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -14493,7 +14395,7 @@ Socket.prototype.disconnect = function(){
   return this;
 };
 
-},{"./on":14,"component-bind":18,"component-emitter":19,"debug":20,"has-binary":50,"socket.io-parser":56,"to-array":60}],16:[function(require,module,exports){
+},{"./on":12,"component-bind":16,"component-emitter":17,"debug":18,"has-binary":48,"socket.io-parser":54,"to-array":58}],14:[function(require,module,exports){
 (function (global){
 
 /**
@@ -14570,7 +14472,7 @@ function url(uri, loc){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":20,"parseuri":54}],17:[function(require,module,exports){
+},{"debug":18,"parseuri":52}],15:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -14657,7 +14559,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],18:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -14682,7 +14584,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],19:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -14848,7 +14750,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -14987,11 +14889,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],21:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":22}],22:[function(require,module,exports){
+},{"./lib/":20}],20:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -15003,7 +14905,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":23,"engine.io-parser":35}],23:[function(require,module,exports){
+},{"./socket":21,"engine.io-parser":33}],21:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -15712,7 +15614,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":24,"./transports":25,"component-emitter":19,"debug":32,"engine.io-parser":35,"indexof":52,"parsejson":46,"parseqs":47,"parseuri":48}],24:[function(require,module,exports){
+},{"./transport":22,"./transports":23,"component-emitter":17,"debug":30,"engine.io-parser":33,"indexof":50,"parsejson":44,"parseqs":45,"parseuri":46}],22:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -15873,7 +15775,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":19,"engine.io-parser":35}],25:[function(require,module,exports){
+},{"component-emitter":17,"engine.io-parser":33}],23:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -15930,7 +15832,7 @@ function polling(opts){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":26,"./polling-xhr":27,"./websocket":29,"xmlhttprequest":30}],26:[function(require,module,exports){
+},{"./polling-jsonp":24,"./polling-xhr":25,"./websocket":27,"xmlhttprequest":28}],24:[function(require,module,exports){
 (function (global){
 
 /**
@@ -16167,7 +16069,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":28,"component-inherit":31}],27:[function(require,module,exports){
+},{"./polling":26,"component-inherit":29}],25:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -16555,7 +16457,7 @@ function unloadHandler() {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":28,"component-emitter":19,"component-inherit":31,"debug":32,"xmlhttprequest":30}],28:[function(require,module,exports){
+},{"./polling":26,"component-emitter":17,"component-inherit":29,"debug":30,"xmlhttprequest":28}],26:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -16802,7 +16704,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":24,"component-inherit":31,"debug":32,"engine.io-parser":35,"parseqs":47,"xmlhttprequest":30}],29:[function(require,module,exports){
+},{"../transport":22,"component-inherit":29,"debug":30,"engine.io-parser":33,"parseqs":45,"xmlhttprequest":28}],27:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -17042,7 +16944,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":24,"component-inherit":31,"debug":32,"engine.io-parser":35,"parseqs":47,"ws":49}],30:[function(require,module,exports){
+},{"../transport":22,"component-inherit":29,"debug":30,"engine.io-parser":33,"parseqs":45,"ws":47}],28:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -17080,7 +16982,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":44}],31:[function(require,module,exports){
+},{"has-cors":42}],29:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -17088,7 +16990,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],32:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -17237,7 +17139,7 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":33}],33:[function(require,module,exports){
+},{"./debug":31}],31:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -17436,7 +17338,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":34}],34:[function(require,module,exports){
+},{"ms":32}],32:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -17549,7 +17451,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],35:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -18147,7 +18049,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":36,"after":37,"arraybuffer.slice":38,"base64-arraybuffer":39,"blob":40,"has-binary":41,"utf8":43}],36:[function(require,module,exports){
+},{"./keys":34,"after":35,"arraybuffer.slice":36,"base64-arraybuffer":37,"blob":38,"has-binary":39,"utf8":41}],34:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -18168,7 +18070,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],37:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -18198,7 +18100,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],38:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -18229,7 +18131,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],39:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -18290,7 +18192,7 @@ module.exports = function(arraybuffer, start, end) {
   };
 })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
-},{}],40:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -18343,7 +18245,7 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],41:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 (function (global){
 
 /*
@@ -18405,12 +18307,12 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":42}],42:[function(require,module,exports){
+},{"isarray":40}],40:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],43:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/utf8js v2.0.0 by @mathias */
 ;(function(root) {
@@ -18653,7 +18555,7 @@ module.exports = Array.isArray || function (arr) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],44:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -18678,7 +18580,7 @@ try {
   module.exports = false;
 }
 
-},{"global":45}],45:[function(require,module,exports){
+},{"global":43}],43:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -18688,7 +18590,7 @@ try {
 
 module.exports = (function () { return this; })();
 
-},{}],46:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -18723,7 +18625,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -18762,7 +18664,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],48:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -18803,7 +18705,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],49:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -18848,7 +18750,7 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}],50:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (global){
 
 /*
@@ -18910,9 +18812,9 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":51}],51:[function(require,module,exports){
-arguments[4][42][0].apply(exports,arguments)
-},{"dup":42}],52:[function(require,module,exports){
+},{"isarray":49}],49:[function(require,module,exports){
+arguments[4][40][0].apply(exports,arguments)
+},{"dup":40}],50:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -18923,7 +18825,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],53:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 
 /**
  * HOP ref.
@@ -19008,7 +18910,7 @@ exports.length = function(obj){
 exports.isEmpty = function(obj){
   return 0 == exports.length(obj);
 };
-},{}],54:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -19035,7 +18937,7 @@ module.exports = function parseuri(str) {
   return uri;
 };
 
-},{}],55:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -19180,7 +19082,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":57,"isarray":58}],56:[function(require,module,exports){
+},{"./is-buffer":55,"isarray":56}],54:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -19582,7 +19484,7 @@ function error(data){
   };
 }
 
-},{"./binary":55,"./is-buffer":57,"component-emitter":19,"debug":20,"isarray":58,"json3":59}],57:[function(require,module,exports){
+},{"./binary":53,"./is-buffer":55,"component-emitter":17,"debug":18,"isarray":56,"json3":57}],55:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -19599,9 +19501,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],58:[function(require,module,exports){
-arguments[4][42][0].apply(exports,arguments)
-},{"dup":42}],59:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
+arguments[4][40][0].apply(exports,arguments)
+},{"dup":40}],57:[function(require,module,exports){
 /*! JSON v3.2.6 | http://bestiejs.github.io/json3 | Copyright 2012-2013, Kit Cambridge | http://kit.mit-license.org */
 ;(function (window) {
   // Convenience aliases.
@@ -20464,7 +20366,7 @@ arguments[4][42][0].apply(exports,arguments)
   }
 }(this));
 
-},{}],60:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -20479,46 +20381,40 @@ function toArray(list, index) {
     return array
 }
 
-},{}],61:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 'use strict';
 
-var $ = require('zepto-browserify').$;
-
-//jshint maxparams: 8
 module.exports = {
   type: 'ClientSideAssembler',
-  deps: ['DisplayBehaviour', 'SocketBehaviour', 'Dimensions', 'Element', 'InputElement', 'Window', 'UpdateLoop'],
-  func: function (displayBehaviour, socketBehaviour, dimensions, element, inputElement, window, updateLoop) {
+  deps: ['SocketBehaviour', 'Dimensions', 'Window', 'UpdateLoop', 'OnResize'],
+  func: function (socketBehaviour, dimensions, window, updateLoop, resizeCallbacks) {
+
+    var each = require('lodash').each;
+    var $ = require('zepto-browserify').$;
+
+    var resizeCanvas = function () {
+      var dims = dimensions().get();
+
+      each(resizeCallbacks(), function(resizeCallback) {
+        resizeCallback(dims);
+      });
+    };
+
     return {
       assembleAndRun: function () {
-        var display = displayBehaviour().Display();
         var socket = socketBehaviour().SocketBehaviour();
-        socket.connect(display.setup, display.update);
-
-        var resizeCanvas = function () {
-          var dims = dimensions().get();
-
-          $('#' + element()).css('margin-top', dims.marginTopBottom);
-          $('#' + element()).css('width', dims.usableWidth);
-          $('#' + element()).css('height', dims.usableHeight);
-
-          $('#' + inputElement()).css('margin-top', dims.marginTopBottom);
-          $('#' + inputElement()).css('width', dims.usableWidth);
-          $('#' + inputElement()).css('height', dims.usableHeight);
-
-          display.resize(dims);
-        };
+        socket.connect();
 
         $(window()).on('load resize', resizeCanvas);
-        updateLoop().UpdateLoop(display.updateDisplay).run();
+        updateLoop().run();
       }
     };
   }
 };
-},{"zepto-browserify":78}],62:[function(require,module,exports){
+},{"lodash":6,"zepto-browserify":85}],60:[function(require,module,exports){
 'use strict';
 
-var plugins = require('plug-n-play').configure(['View', 'InputMode', 'OnMute', 'OnPause', 'OnResume', 'OnUnmute', 'OnConnect', 'OnDisconnect']);
+var plugins = require('plug-n-play').configure(['View', 'InputMode', 'OnMute', 'OnPause', 'OnResume', 'OnUnmute', 'OnConnect', 'OnDisconnect', 'OnEachFrame', 'OnResize', 'OnPacket', 'OnSetup', 'OnError', 'OnSystemSetup']);
 
 module.exports = {
   load: plugins.load,
@@ -20538,14 +20434,20 @@ module.exports = {
     plugins.set('InputElement', 'input');
 
     plugins.load(require('./ui/dimensions'));
-    plugins.load(require('./ui/display'));
+    plugins.load(require('./ui/effects'));
     plugins.load(require('./events/on_connect'));
     plugins.load(require('./events/on_disconnect'));
-    plugins.load(require('./socket/client'));
+    plugins.load(require('./events/on_resize'));
+    plugins.load(require('./events/acknowledge-packet'));
+    plugins.load(require('./events/initialise-state'));
+    plugins.load(require('./events/update-state'));
+    plugins.load(require('./events/initialise-views'));
+    plugins.load(require('./events/on-error'));
     plugins.load(require('./state/tracker'));
     plugins.load(require('./state/shortcuts'));
     plugins.load(require('./input/keyboard'));
     plugins.load(require('./update/loop'));
+    plugins.load(require('./socket/client'));
     plugins.load(require('./socket/pending-acknowledgements'));
 
     plugins.load(require('./views/fullscreen'));
@@ -20557,7 +20459,60 @@ module.exports = {
     plugins.load(require('./assembler'));
   }
 };
-},{"./assembler":61,"./events/on_connect":63,"./events/on_disconnect":64,"./input/keyboard":65,"./socket/client":66,"./socket/pending-acknowledgements":67,"./state/shortcuts":68,"./state/tracker":69,"./ui/dimensions":70,"./ui/display":71,"./update/loop":72,"./views/fullscreen":73,"./views/layout_icons":74,"./views/pause_resume":75,"./views/player_observer_count":76,"./views/toggle_sound":77,"plug-n-play":9}],63:[function(require,module,exports){
+},{"./assembler":59,"./events/acknowledge-packet":61,"./events/initialise-state":62,"./events/initialise-views":63,"./events/on-error":64,"./events/on_connect":65,"./events/on_disconnect":66,"./events/on_resize":67,"./events/update-state":68,"./input/keyboard":69,"./socket/client":70,"./socket/pending-acknowledgements":71,"./state/shortcuts":72,"./state/tracker":73,"./ui/dimensions":74,"./ui/effects":75,"./update/loop":76,"./views/fullscreen":77,"./views/layout_icons":78,"./views/pause_resume":79,"./views/player_observer_count":80,"./views/toggle_sound":81,"plug-n-play":84}],61:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  type: 'OnPacket',
+  deps: ['PendingAcknowledgements'],
+  func: function (pendingAcknowledgements) {
+    return function (packet) {
+      pendingAcknowledgements().add(packet.id);
+    };
+  }
+};
+},{}],62:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  type: 'OnSetup',
+  deps: ['StateTracker'],
+  func: function (tracker) {
+    return function (state) {
+      tracker().updateState(state);
+    };
+  }
+};
+},{}],63:[function(require,module,exports){
+'use strict';
+
+var each = require('lodash').each;
+
+module.exports = {
+  type: 'OnSetup',
+  deps: ['View', 'Dimensions'],
+  func: function (views, dimensions) {
+    return function () {
+      var dims = dimensions().get();
+
+      each(views(), function(view) {
+        view(dims);
+      });
+    };
+  }
+};
+},{"lodash":6}],64:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  type: 'OnError',
+  func: function() {
+    return function(data) {
+      throw new Error(data);
+    };
+  }
+};
+},{}],65:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -20570,7 +20525,7 @@ module.exports = {
     };
   }
 };
-},{"zepto-browserify":78}],64:[function(require,module,exports){
+},{"zepto-browserify":85}],66:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -20583,7 +20538,46 @@ module.exports = {
     };
   }
 };
-},{"zepto-browserify":78}],65:[function(require,module,exports){
+},{"zepto-browserify":85}],67:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  type: 'OnResize',
+  deps: ['Element', 'InputElement'],
+  func: function (element, inputElement) {
+    var $ = require('zepto-browserify').$;
+
+    return function (dims) {
+      $('#' + element()).css('margin-top', dims.marginTopBottom);
+      $('#' + element()).css('width', dims.usableWidth);
+      $('#' + element()).css('height', dims.usableHeight);
+
+      $('#' + inputElement()).css('margin-top', dims.marginTopBottom);
+      $('#' + inputElement()).css('width', dims.usableWidth);
+      $('#' + inputElement()).css('height', dims.usableHeight);
+    };
+  }
+};
+},{"zepto-browserify":85}],68:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  type: 'OnPacket',
+  deps: ['StateTracker'],
+  func: function (tracker) {
+    var lastReceivedId = 0;
+
+    return function (packet) {
+      if (packet.id <= lastReceivedId) {
+        return;
+      }
+      lastReceivedId = packet.id;
+
+      tracker().updateState(packet.gameState);
+    };
+  }
+};
+},{}],69:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -20722,8 +20716,10 @@ module.exports = {
         return {
           getCurrentState: function () {
             var inputData = {
-              x: x,
-              y: y,
+              mouse: {
+                x: x,
+                y: y
+              },
               touches: touches
             };
 
@@ -20751,18 +20747,18 @@ module.exports = {
     };
   }
 };
-},{"lodash":6,"zepto-browserify":78}],66:[function(require,module,exports){
+},{"lodash":6,"zepto-browserify":85}],70:[function(require,module,exports){
 'use strict';
 
 var each = require('lodash').each;
 var extend = require('lodash').extend;
 var $ = require('zepto-browserify').$;
 
-//jshint maxparams: 7
+//jshint maxparams: 11
 module.exports = {
-  deps: ['Window', 'InputMode', 'GameMode', 'ServerUrl', 'OnConnect', 'OnDisconnect', 'PendingAcknowledgements'],
+  deps: ['Window', 'InputMode', 'GameMode', 'ServerUrl', 'OnConnect', 'OnDisconnect', 'PendingAcknowledgements', 'OnPacket', 'OnSetup', 'OnError', 'OnSystemSetup'],
   type: 'SocketBehaviour',
-  func: function (window, inputModes, gameMode, serverUrl, onConnectCallbacks, onDisconnectCallbacks, pendingAcknowledgements) {
+  func: function (window, inputModes, gameMode, serverUrl, onConnectCallbacks, onDisconnectCallbacks, pendingAcknowledgements, onPacketCallbacks, onSetupCallbacks, onErrorCallbacks, onSystemSetupCallbacks) {
     return {
       SocketBehaviour: function () {
         var controls = [];
@@ -20782,29 +20778,58 @@ module.exports = {
           };
         };
 
-        return {
-            connect: function (setupFunc, updateFunc) {
-              var io = require('socket.io-client');
+        var url = function () {
+          return serverUrl() + gameMode() + '/primary';
+        };
 
-              var socket = io.connect(serverUrl() + gameMode() + '/primary', {reconnection: false});
+        return {
+            connect: function () {
+              var io = require('socket.io-client');
+              var socket = io.connect(url(), {reconnection: false});
 
               if (window().document.hasFocus()) {
-                  socket.emit('unpause');
+                socket.emit('unpause');
               }
 
-              each(onConnectCallbacks(), function (callback) {
-                socket.on('connect', callback);
-              });
-              each(onDisconnectCallbacks(), function (callback) {
-                socket.on('disconnect', callback);
+              each(onSystemSetupCallbacks(), function (callback) {
+                callback();
               });
 
+              socket.on('connect', function () {
+                console.log('connect');
+                each(onConnectCallbacks(), function (callback) {
+                  callback();
+                });
+              });
+              // var unfurl = require('unfurler');
+              // socket.on('connect', unfurl.array(onConnectCallbacks));
+              socket.on('disconnect', function () {
+                console.log('disconnect');
+                each(onDisconnectCallbacks(), function (callback) {
+                  callback();
+                });
+              });
               socket.on('playerId', function (playerId) {
                 socket.playerId = playerId;
               });
-              socket.on('initialState', setupFunc);
-              socket.on('updateState', updateFunc);
-              socket.on('error', function (data) { throw new Error(data); });
+              socket.on('initialState', function (state) {
+                console.log('initialState');
+                each(onSetupCallbacks(), function (callback) {
+                  callback(state);
+                });
+              });
+              socket.on('updateState', function (state) {
+                console.log('updateState');
+                each(onPacketCallbacks(), function (callback) {
+                  callback(state);
+                });
+              });
+              socket.on('error', function (data) {
+                console.log('error');
+                each(onErrorCallbacks(), function (callback) {
+                  callback(data);
+                });
+              });
 
               $(window()).on('blur', function () { socket.emit('pause'); });
               $(window()).on('focus', function () { socket.emit('unpause'); });
@@ -20815,7 +20840,7 @@ module.exports = {
                 controls.push(inputMode.InputMode());
               });
 
-              var id = setInterval(configureEmitFunction(socket), 1000 / 120);
+              var id = setInterval(configureEmitFunction (socket), 1000 / 120);
               socket.on('disconnect', function () {
                 clearInterval(id);
               });
@@ -20825,7 +20850,7 @@ module.exports = {
     };
   }
 };
-},{"lodash":6,"socket.io-client":11,"zepto-browserify":78}],67:[function(require,module,exports){
+},{"lodash":6,"socket.io-client":9,"zepto-browserify":85}],71:[function(require,module,exports){
 'use strict';
 
 var clone = require('lodash').clone;
@@ -20856,7 +20881,7 @@ module.exports = {
         };
     }
 };
-},{"lodash":6}],68:[function(require,module,exports){
+},{"lodash":6}],72:[function(require,module,exports){
 'use strict';
 
 var isEqual = require('lodash').isEqual;
@@ -20873,7 +20898,7 @@ module.exports = {
     };
   }
 };
-},{"lodash":6}],69:[function(require,module,exports){
+},{"lodash":6}],73:[function(require,module,exports){
 'use strict';
 
 var each = require('lodash').each;
@@ -21056,7 +21081,7 @@ module.exports = {
     };
   }
 };
-},{"lodash":6}],70:[function(require,module,exports){
+},{"lodash":6}],74:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -21111,138 +21136,74 @@ module.exports = {
     };
   }
 };
-},{}],71:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 
 var each = require('lodash').each;
 var reject = require('lodash').reject;
 
 module.exports = {
-  deps: ['Dimensions', 'View', 'StateTracker', 'PendingAcknowledgements', 'DefinePlugin'],
-  type: 'DisplayBehaviour',
-  func: function (dimensions, views, tracker, pendingAcknowledgements, define) {
+  deps: ['DefinePlugin'],
+  type: 'OnSystemSetup',
+  func: function (define) {
     var effects = [];
-    var priorStep = Date.now();
-    var lastReceivedId = 0;
 
-    var setupComplete = false;
-
-    return {
-      Display: function () {
-        var dims = dimensions().get();
-
-        each(views(), function (levelPart) {
-          if (levelPart.screenResized) {
-            levelPart.screenResized(dims);
-          }
-        });
-
-        define()('RegisterEffect', function () {
-          return {
-            register: function (effect) {
-              effects.push(effect);
-            }
-          };
-        });
-
-        var setup = function (state) {
-          tracker().updateState(state);
-
-          each(views(), function (levelPart) {
-            if (levelPart.setup) {
-              levelPart.setup();
-            }
-          });
-
-          setupComplete = true;
-        };
-
-        var update = function (packet) {
-          pendingAcknowledgements().add(packet.id);
-
-          if (packet.id <= lastReceivedId) {
-            return;
-          }
-          lastReceivedId = packet.id;
-
-          tracker().updateState(packet.gameState);
-        };
-
-        var doUpdate = function () {
-          var now = Date.now();
-
-          var dt = (now - priorStep) / 1000;
-          priorStep = Date.now();
-
-          each(views(), function (levelPart) {
-            if (levelPart.update) {
-              levelPart.update(dt);
-            }
-          });
-
-          if (!setupComplete) {
-            return;
-          }
-
+    return function () {
+      define()('OnEachFrame', function () {
+        return function (delta) {
           each(effects, function (effect) {
-            effect.tick(dt);
+            effect.tick(delta);
           });
 
           effects = reject(effects, function (effect) {
             return !effect.isAlive();
           });
         };
+      });
 
-        var dontUpdate = function () {
-          priorStep = Date.now();
-        };
-
-        var paused = function (state) { return state.ensemble.paused; };
-
+      define()('RegisterEffect', function () {
         return {
-          setup: setup,
-          update: update,
-          updateDisplay: function () {
-            if (tracker().get(paused)) {
-              dontUpdate();
-            } else {
-              doUpdate();
-            }
-          },
-
-          resize: function (dims) {
-            each(views(), function (levelPart) {
-              if (levelPart.screenResized) {
-                levelPart.screenResized(dims);
-              }
-            });
+          register: function (effect) {
+            effects.push(effect);
           }
         };
-      }
+      });
     };
   }
 };
-},{"lodash":6}],72:[function(require,module,exports){
+},{"lodash":6}],76:[function(require,module,exports){
 'use strict';
 
-module.exports = {
-    deps: ['Window'],
-    type: 'UpdateLoop',
-    func: function (window) {
-        return {
-            UpdateLoop: function (updateFunc) {
-                return {
-                    run: function (time) {
-                        updateFunc(time);
+var each = require('lodash').each;
 
-                        window().requestAnimationFrame(this.run.bind(this));
-                    }
-                };
-            }
-        };
+module.exports = {
+  deps: ['Window', 'OnEachFrame', 'StateTracker'],
+  type: 'UpdateLoop',
+  func: function (window, frames, tracker) {
+    var priorStep = Date.now();
+
+    var paused = function (state) { return state.ensemble.paused; };
+
+    return {
+      run: function () {
+        if (tracker().get(paused)) {
+          priorStep = Date.now();
+        } else {
+          var now = Date.now();
+          var delta = (now - priorStep) / 1000;
+          priorStep = Date.now();
+
+          each(frames(), function(frame) {
+            frame(delta);
+          });
+        }
+
+        window().requestAnimationFrame(this.run.bind(this));
+      }
+    };
     }
 };
-},{}],73:[function(require,module,exports){
+},{"lodash":6}],77:[function(require,module,exports){
 'use strict';
 
 var screenfull = require('screenfull');
@@ -21251,18 +21212,16 @@ var $ = require('zepto-browserify').$;
 module.exports = {
   type: 'View',
   func: function () {
-    return {
-      setup: function () {
-        $('.fullscreen').on('click', function () {
-          if (screenfull.enabled) {
-            screenfull.toggle();
-          }
-        });
-      }
+    return function () {
+      $('.fullscreen').on('click', function () {
+        if (screenfull.enabled) {
+          screenfull.toggle();
+        }
+      });
     };
   }
 };
-},{"screenfull":10,"zepto-browserify":78}],74:[function(require,module,exports){
+},{"screenfull":8,"zepto-browserify":85}],78:[function(require,module,exports){
 'use strict';
 
 var iconSize = 32;
@@ -21313,23 +21272,20 @@ var portrait = function ($) {
 };
 
 module.exports = {
-  type: 'View',
-  deps: ['Dimensions'],
-  func: function (dimensions) {
+  type: 'OnResize',
+  func: function () {
     var $ = require('zepto-browserify').$;
 
-    return {
-      screenResized: function () {
-        if (dimensions().get().orientation === 'landscape') {
-          landscape($);
-        } else {
-          portrait($);
-        }
+    return function (dims) {
+      if (dims.orientation === 'landscape') {
+        landscape($);
+      } else {
+        portrait($);
       }
     };
   }
 };
-},{"zepto-browserify":78}],75:[function(require,module,exports){
+},{"zepto-browserify":85}],79:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -21357,17 +21313,15 @@ module.exports = {
       });
     };
 
-    return {
-      setup: function () {
-        var paused = function (state) { return state.ensemble.paused; };
+    var paused = function (state) { return state.ensemble.paused; };
 
-        tracker().onChangeTo(paused, equals(true), pause);
-        tracker().onChangeTo(paused, equals(false), resume);
-      }
+    return function () {
+      tracker().onChangeTo(paused, equals(true), pause);
+      tracker().onChangeTo(paused, equals(false), resume);
     };
   }
 };
-},{"lodash":6,"zepto-browserify":78}],76:[function(require,module,exports){
+},{"lodash":6,"zepto-browserify":85}],80:[function(require,module,exports){
 'use strict';
 
 var numeral = require('numeral');
@@ -21385,18 +21339,16 @@ module.exports = {
       $('#observer-count').text(numeral(currentValue).format('0a'));
     };
 
-    return {
-      setup: function () {
-        var playerCount = function (state) { return state.ensemble.players; };
-        var observerCount = function (state) { return state.ensemble.observers; };
+    var playerCount = function (state) { return state.ensemble.players; };
+    var observerCount = function (state) { return state.ensemble.observers; };
 
-        tracker().onChangeOf(playerCount, updatePlayerCount);
-        tracker().onChangeOf(observerCount, updateObserverCount);
-        }
+    return function () {
+      tracker().onChangeOf(playerCount, updatePlayerCount);
+      tracker().onChangeOf(observerCount, updateObserverCount);
     };
   }
 };
-},{"numeral":7,"zepto-browserify":78}],77:[function(require,module,exports){
+},{"numeral":7,"zepto-browserify":85}],81:[function(require,module,exports){
 'use strict';
 
 var each = require('lodash').each;
@@ -21406,30 +21358,159 @@ module.exports = {
   type: 'View',
   deps: ['OnMute', 'OnUnmute'],
   func: function (onMuteCallbacks, onUnmuteCallbacks) {
-    return {
-      setup: function () {
+    return function () {
+      $('.sound-off').hide();
+      $('.sound-on').on('click', function () {
+        $('.sound-on').hide();
+        $('.sound-off').show();
+
+        each(onMuteCallbacks, function(onMuteCallback) {
+          onMuteCallback();
+        });
+      });
+      $('.sound-off').on('click', function () {
         $('.sound-off').hide();
-        $('.sound-on').on('click', function () {
-          $('.sound-on').hide();
-          $('.sound-off').show();
+        $('.sound-on').show();
 
-          each(onMuteCallbacks, function(onMuteCallback) {
-            onMuteCallback();
-          });
+        each(onUnmuteCallbacks, function(onUnmuteCallback) {
+          onUnmuteCallback();
         });
-        $('.sound-off').on('click', function () {
-          $('.sound-off').hide();
-          $('.sound-on').show();
-
-          each(onUnmuteCallbacks, function(onUnmuteCallback) {
-            onUnmuteCallback();
-          });
-        });
-      }
+      });
     };
   }
 };
-},{"lodash":6,"zepto-browserify":78}],78:[function(require,module,exports){
+},{"lodash":6,"zepto-browserify":85}],82:[function(require,module,exports){
+arguments[4][6][0].apply(exports,arguments)
+},{"dup":6}],83:[function(require,module,exports){
+(function (__dirname){
+'use strict';
+
+var addTrailingSlash = function(path) {
+	return path.substr(-1) === '/' ? path : path + '/';
+};
+
+var normaliseRelativePath = function(path) {
+	return path.substr(0, 1) === '/' ? path : require('path').join(__dirname, path);
+};
+
+module.exports = {
+	loadFromPath: function(pathToEntites, callback) {
+		var absolutePath = normaliseRelativePath(addTrailingSlash(pathToEntites));
+
+		var exports = {};
+
+		require('fs').readdirSync(absolutePath).forEach(function(file){
+			if (file.substr(-3) !== '.js') {
+				return;
+			}
+
+			var name = file.replace('.js', '');
+
+			if (callback) {
+				callback(require(absolutePath + file));
+			} else {
+				exports[name] = require(absolutePath + file);
+			}
+		});
+
+		return exports;
+	}
+};
+}).call(this,"/node_modules/plug-n-play/src")
+},{"fs":3,"path":4}],84:[function(require,module,exports){
+'use strict';
+
+var loader = require('./folder-loader.js');
+var isArray = require('lodash').isArray;
+var each = require('lodash').each;
+
+var plugins = {};
+
+var get = function (name) {
+  if (!plugins[name]) {
+    throw new Error('No plugin defined for: ' + name);
+  }
+
+  return plugins[name];
+};
+
+var load = function (module) {
+  module.deps = module.deps || [];
+
+  var args = [];
+  var i;
+
+  var deferredDependency = function (deferred) {
+    return function () {
+      if (arguments.length > 0) {
+        throw new Error('Incorrect use of deferred dependency. You\'re probably going blah(p1, p2) when you should be going blah()(p1, p2).');
+      }
+
+      return get(deferred);
+    };
+  };
+
+  var dep;
+  for (i = 0; i < module.deps.length; i += 1) {
+    dep = module.deps[i];
+
+    args.push(deferredDependency(dep));
+  }
+
+  if (isArray(plugins[module.type])) {
+    plugins[module.type].push(module.func.apply(this, args));
+  } else {
+    plugins[module.type] = module.func.apply(this, args);
+  }
+};
+
+var loadPath = function (path) {
+  loader.loadFromPath(path, load);
+};
+
+var set = function (name, thing) {
+  plugins[name] = thing;
+};
+
+var define = function (type, deps, func) {
+  if (deps instanceof Function) {
+    return {
+      type: type,
+      func: deps
+    };
+  } else {
+    return {
+      type: type,
+      deps: deps,
+      func: func
+    };
+  }
+};
+
+load({
+  type: 'DefinePlugin',
+  func: function () {
+    return function (type, deps, func) {
+      load(define(type, deps, func));
+    };
+  }
+});
+
+module.exports = {
+  configure: function(arrays) {
+    each(arrays, function(name) {
+      plugins[name] = [];
+    });
+
+    return {
+      load: load,
+      loadPath: loadPath,
+      set: set,
+      get: get
+    };
+  }
+};
+},{"./folder-loader.js":83,"lodash":82}],85:[function(require,module,exports){
 /* Zepto v1.1.6 - zepto event ajax form ie - zeptojs.com/license */
 
 var Zepto = (function() {
