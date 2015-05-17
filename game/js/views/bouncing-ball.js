@@ -9,12 +9,12 @@ module.exports = {
     var canvas;
     var context;
 
-    var updateBall = function(currentPosition) {
-      if (currentPosition === undefined) {
+    var updateBall = function(currentPosition, currentColour) {
+      if (currentPosition === undefined || currentColour === undefined) {
         return;
       }
 
-      context.fillStyle = 'blue';
+      context.fillStyle = currentColour;
       context.beginPath();
       context.arc(currentPosition.x, currentPosition.y, 25, 0, 2*Math.PI);
       context.closePath();
@@ -23,6 +23,10 @@ module.exports = {
 
     var theBallPosition = function (state) {
       return state['bouncing-ball-game'].ball.position;
+    };
+
+    var theBallColour = function (state) {
+      return state['bouncing-ball-game'].ball.colour;
     };
 
     return function (dims) {
@@ -36,7 +40,7 @@ module.exports = {
       define()('OnEachFrame', function () {
         return function () {
           context.clearRect(0, 0, canvas[0].width, canvas[0].height);
-          updateBall(tracker().get(theBallPosition));
+          updateBall(tracker().get(theBallPosition), tracker().get(theBallColour));
         };
       });
 
