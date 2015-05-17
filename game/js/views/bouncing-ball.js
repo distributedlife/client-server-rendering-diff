@@ -14,7 +14,7 @@ module.exports = {
         return;
       }
 
-      context.fillStyle = currentColour;
+      context.fillStyle = '#' + currentColour.toString(16);
       context.beginPath();
       context.arc(currentPosition.x, currentPosition.y, 25, 0, 2*Math.PI);
       context.closePath();

@@ -7,7 +7,7 @@ module.exports = {
     return {
       changeColour: function () {
         var current = state().get('bouncing-ball-game')('ball')('colour');
-        var newColour = (current === '#000000' ? '#ff0000' : '#000000');
+        var newColour = (current === 0xffffff ? 0xff0000 : 0xffffff);
 
         return {
           'bouncing-ball-game': {
