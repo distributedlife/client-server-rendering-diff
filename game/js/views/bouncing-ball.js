@@ -4,19 +4,17 @@ var $ = require('zepto-browserify').$;
 
 module.exports = {
   type: 'View',
-  deps: ['Element', 'Dimensions', 'StateTracker', 'DefinePlugin'],
-  func: function (element, dimensions, tracker, define) {
-    var canvas;
-    var context;
-
-    var updateBall = function(currentPosition, currentColour) {
-      if (currentPosition === undefined || currentColour === undefined) {
-        return;
+  deps: ['Element', 'StateTracker', 'DefinePlugin'],
+  func: function (element, tracker, define) {
+    var drawBall = function(context, position, demeanour) {
+      if (demeanour === 'happy') {
+        context.fillStyle = '#ffffff';
+      } else {
+        context.fillStyle = '#ff0000';
       }
 
-      context.fillStyle = '#' + currentColour.toString(16);
       context.beginPath();
-      context.arc(currentPosition.x, currentPosition.y, 25, 0, 2*Math.PI);
+      context.arc(position.x, position.y, 25, 0, 2*Math.PI);
       context.closePath();
       context.fill();
     };
@@ -25,22 +23,22 @@ module.exports = {
       return state['bouncing-ball-game'].ball.position;
     };
 
-    var theBallColour = function (state) {
-      return state['bouncing-ball-game'].ball.colour;
+    var theBallDemeanour = function (state) {
+      return state['bouncing-ball-game'].ball.demeanour;
     };
 
     return function (dims) {
-      canvas = $('<canvas/>', { id: 'scene' });
+      var canvas = $('<canvas/>', { id: 'scene' });
       canvas[0].width = dims.usableWidth;
       canvas[0].height = dims.usableHeight;
-      context = canvas[0].getContext('2d');
+      var context = canvas[0].getContext('2d');
 
       $('#' + element()).append(canvas);
 
       define()('OnEachFrame', function () {
         return function () {
           context.clearRect(0, 0, canvas[0].width, canvas[0].height);
-          updateBall(tracker().get(theBallPosition), tracker().get(theBallColour));
+          drawBall(context, tracker().get(theBallPosition), tracker().get(theBallDemeanour));
         };
       });
 
