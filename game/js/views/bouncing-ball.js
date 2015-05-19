@@ -6,13 +6,16 @@ module.exports = {
   type: 'View',
   deps: ['Element', 'StateTracker', 'DefinePlugin'],
   func: function (element, tracker, define) {
-    var drawBall = function(context, position, demeanour, radius) {
+    var ballColour = function(demeanour) {
       if (demeanour === 'happy') {
-        context.fillStyle = '#ffffff';
+        return '#ffffff';
       } else {
-        context.fillStyle = '#ff0000';
+        return '#ff0000';
       }
+    };
 
+    var drawBall = function(context, position, demeanour, radius) {
+      context.fillStyle = ballColour(demeanour);
       context.beginPath();
       context.arc(position.x, position.y, radius, 0, 2*Math.PI);
       context.closePath();
