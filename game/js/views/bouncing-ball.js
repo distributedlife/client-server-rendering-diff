@@ -6,7 +6,7 @@ module.exports = {
   type: 'View',
   deps: ['Element', 'StateTracker', 'DefinePlugin'],
   func: function (element, tracker, define) {
-    var drawBall = function(context, position, demeanour) {
+    var drawBall = function(context, position, demeanour, radius) {
       if (demeanour === 'happy') {
         context.fillStyle = '#ffffff';
       } else {
@@ -14,19 +14,40 @@ module.exports = {
       }
 
       context.beginPath();
-      context.arc(position.x, position.y, 25, 0, 2*Math.PI);
+      context.arc(position.x, position.y, radius, 0, 2*Math.PI);
       context.closePath();
       context.fill();
+    };
+
+    var drawBoard = function(context, dimensions) {
+      context.fillStyle = '#55ff55';
+      context.fillRect(0, 0, dimensions.width, dimensions.height);
     };
 
     var theBallPosition = function (state) {
       return state['bouncing-ball-game'].ball.position;
     };
 
+    var theBallRadius = function (state) {
+      return state['bouncing-ball-game'].ball.radius;
+    };
+
     var theBallDemeanour = function (state) {
       return state['bouncing-ball-game'].ball.demeanour;
     };
 
+    var theBoardDimensions = function (state) {
+      return state['bouncing-ball-game'].board;
+    };
+
+    var calculateOffset = function (boardDimensions, screenDimensions) {
+      return {
+        x: (screenDimensions.usableWidth - boardDimensions.width) / 2,
+        y: (screenDimensions.usableHeight - boardDimensions.height) / 2
+      };
+    };
+
+    var offset;
     return function (dims) {
       var canvas = $('<canvas/>', { id: 'scene' });
       canvas[0].width = dims.usableWidth;
@@ -35,10 +56,14 @@ module.exports = {
 
       $('#' + element()).append(canvas);
 
+      offset = calculateOffset(tracker().get(theBoardDimensions), dims);
+      context.translate(offset.x, offset.y);
+
       define()('OnEachFrame', function () {
         return function () {
           context.clearRect(0, 0, canvas[0].width, canvas[0].height);
-          drawBall(context, tracker().get(theBallPosition), tracker().get(theBallDemeanour));
+          drawBoard(context, tracker().get(theBoardDimensions));
+          drawBall(context, tracker().get(theBallPosition), tracker().get(theBallDemeanour), tracker().get(theBallRadius));
         };
       });
 
@@ -46,6 +71,7 @@ module.exports = {
         return function (dims) {
           canvas[0].width = dims.usableWidth;
           canvas[0].height = dims.usableHeight;
+          offset = calculateOffset(tracker().get(theBoardDimensions), dims);
         };
       });
     };

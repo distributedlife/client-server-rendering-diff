@@ -17,7 +17,12 @@ module.exports = {
                 x: 100,
                 y: 50
               },
-              demeanour: "happy"
+              radius: 25,
+              demeanour: 'happy'
+            },
+            board: {
+              width: 500,
+              height: 500
             }
           }
         };
@@ -26,7 +31,9 @@ module.exports = {
       define()('ServerSideUpdate', ['StateAccess'], function(state) {
         return function (delta) {
           var pos = state().get('bouncing-ball-game')('ball')('position');
+          var radius = state().get('bouncing-ball-game')('ball')('radius');
           var speed = state().get('bouncing-ball-game')('ball')('speed');
+          var board = state().get('bouncing-ball-game')('board');
 
           var newPos = {
             x: pos('x') + speed('x') * delta,
@@ -38,10 +45,10 @@ module.exports = {
             y: speed('y')
           };
 
-          if ((newPos.x > 500) || (newPos.x < 0)) {
+          if ((newPos.x + radius >= board('width')) || (newPos.x - radius <= 0)) {
             newSpeed.x = speed('x') * -1;
           }
-          if ((newPos.y > 500) || (newPos.y < 0)) {
+          if ((newPos.y + radius >= board('height')) || (newPos.y - radius <= 0)) {
             newSpeed.y = speed('y') * -1;
           }
 
