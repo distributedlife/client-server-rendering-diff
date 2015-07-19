@@ -4,8 +4,8 @@ var $ = require('zepto-browserify').$;
 
 module.exports = {
   type: 'View',
-  deps: ['Element', 'StateTracker', 'DefinePlugin'],
-  func: function (element, tracker, define) {
+  deps: ['Element', 'DefinePlugin', 'CurrentState'],
+  func: function (element, define, currentState) {
     var ballColour = function(demeanour) {
       if (demeanour === 'happy') {
         return '#ffffff';
@@ -59,14 +59,14 @@ module.exports = {
 
       $('#' + element()).append(canvas);
 
-      offset = calculateOffset(tracker().get(theBoardDimensions), dims);
+      offset = calculateOffset(currentState().get(theBoardDimensions), dims);
       context.translate(offset.x, offset.y);
 
       define()('OnEachFrame', function () {
         return function () {
           context.clearRect(0, 0, canvas[0].width, canvas[0].height);
-          drawBoard(context, tracker().get(theBoardDimensions));
-          drawBall(context, tracker().get(theBallPosition), tracker().get(theBallDemeanour), tracker().get(theBallRadius));
+          drawBoard(context, currentState().get(theBoardDimensions));
+          drawBall(context, currentState().get(theBallPosition), currentState().get(theBallDemeanour), currentState().get(theBallRadius));
         };
       });
 
@@ -74,7 +74,7 @@ module.exports = {
         return function (dims) {
           canvas[0].width = dims.usableWidth;
           canvas[0].height = dims.usableHeight;
-          offset = calculateOffset(tracker().get(theBoardDimensions), dims);
+          offset = calculateOffset(currentState().get(theBoardDimensions), dims);
         };
       });
     };
