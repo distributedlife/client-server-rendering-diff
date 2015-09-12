@@ -45,7 +45,7 @@ function calculateOffset (boardDimensions, screenDimensions) {
 }
 
 module.exports = {
-  type: 'OnReady',
+  type: 'OnClientReady',
   deps: ['Config', 'DefinePlugin', 'CurrentState', '$'],
   func: function View (config, define, currentState, $) {
     var offset;
