@@ -37,11 +37,42 @@ function theBoardDimensions (state) {
   return state['bouncing-ball-game'].board;
 }
 
+function boardIsSmallerThenScreen(boardDimensions, screenDimensions) {
+  return (boardDimensions.width < screenDimensions.usableWidth ||
+      boardDimensions.height < screenDimensions.usableHeight);
+}
+
+function boardIsBiggerThenScreen(boardDimensions, screenDimensions) {
+  return (boardDimensions.width > screenDimensions.usableWidth ||
+      boardDimensions.height > screenDimensions.usableHeight);
+}
+
 function calculateOffset (boardDimensions, screenDimensions) {
-  return {
-    x: (screenDimensions.usableWidth - boardDimensions.width) / 2,
-    y: (screenDimensions.usableHeight - boardDimensions.height) / 2
-  };
+  if (boardIsSmallerThenScreen(boardDimensions, screenDimensions)) {
+    return {
+      x: (screenDimensions.usableWidth - boardDimensions.width) / 2,
+      y: (screenDimensions.usableHeight - boardDimensions.height) / 2
+    };
+  } else {
+    return {
+      x: 0,
+      y: 0
+    };
+  }
+}
+
+function calculateScale (boardDimensions, screenDimensions) {
+  if (boardIsBiggerThenScreen(boardDimensions, screenDimensions)) {
+    return {
+      x: screenDimensions.usableWidth / boardDimensions.width,
+      y: screenDimensions.usableHeight / boardDimensions.height
+    };
+  } else {
+    return {
+      x: 1,
+      y: 1
+    };
+  }
 }
 
 module.exports = {
@@ -72,7 +103,14 @@ module.exports = {
         return function resizeScene (dims) {
           canvas[0].width = dims.usableWidth;
           canvas[0].height = dims.usableHeight;
-          offset = calculateOffset(currentState().get(theBoardDimensions), dims);
+
+          var boardDimensions = currentState().get(theBoardDimensions);
+
+          var scale = calculateScale(boardDimensions, dims);
+          context.scale(scale.x, scale.y);
+
+          offset = calculateOffset(boardDimensions, dims);
+          context.translate(offset.x, offset.y);
         };
       });
     };
