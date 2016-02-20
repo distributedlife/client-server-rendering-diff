@@ -4,10 +4,10 @@ module.exports = {
   type: 'OnPhysicsFrame',
   func: function OnPhysicsFrame () {
     return function bounceBall (state, delta) {
-      var pos = state.for('bouncing-ball-game').get('ball')('position');
-      var radius = state.for('bouncing-ball-game').get('ball')('radius');
-      var speed = state.for('bouncing-ball-game').get('ball')('speed');
-      var board = state.for('bouncing-ball-game').get('board');
+      var pos = state.get('bouncing-ball-game.ball.position');
+      var radius = state.get('bouncing-ball-game.ball.radius');
+      var speed = state.get('bouncing-ball-game.ball.speed');
+      var board = state.get('bouncing-ball-game.board');
 
       var newPos = {
         x: pos('x') + speed('x') * delta,
